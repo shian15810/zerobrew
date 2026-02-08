@@ -196,6 +196,18 @@ lint:
 test:
     cargo test --workspace -- --include-ignored
 
+[doc('Install site dependencies')]
+[group('web')]
+[script]
+site-install:
+    pnpm --dir site install --frozen-lockfile
+
+[doc('Serve Eleventy site with live reload')]
+[group('web')]
+[script]
+serve: site-install
+    pnpm --dir site dev
+
 [doc('Run benchmark comparing zerobrew vs homebrew')]
 [group('benchmark')]
 [positional-arguments]
