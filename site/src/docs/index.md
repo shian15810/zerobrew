@@ -1,5 +1,5 @@
 ---
 title: Documentation
-layout: layouts/base.njk
+layout: layouts/docs.njk
 ---
 

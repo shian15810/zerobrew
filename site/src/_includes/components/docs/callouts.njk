@@ -1,0 +1,6 @@
+{% macro callout(kind='info', title='', body='') %}
+  <aside class="callout callout-{{ kind }}">
+    {% if title %}<strong>{{ title }}</strong>{% endif %}
+    {% if body %}<p>{{ body }}</p>{% endif %}
+  </aside>
+{% endmacro %}

@@ -1,0 +1,29 @@
+<div class="docs-shell">
+  <aside class="docs-sidebar" aria-label="Documentation navigation">
+    <p><strong>Docs</strong></p>
+    {% set currentUrl = page.url if page and page.url else '' %}
+    {% if docs and docs.groups %}
+      {% for group in docs.groups %}
+        <section class="docs-nav-group">
+          <h2>{{ group.title }}</h2>
+          <ul>
+            {% for docPage in group.pages %}
+              {% set isActive = docPage.href == currentUrl %}
+              <li>
+                {% if isActive %}
+                  <a href="{{ docPage.href }}" class="is-active" aria-current="page">{{ docPage.title }}</a>
+                {% else %}
+                  <a href="{{ docPage.href }}">{{ docPage.title }}</a>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endfor %}
+    {% endif %}
+  </aside>
+
+  <main class="docs-main">
+    {{ content | safe }}
+  </main>
+</div>

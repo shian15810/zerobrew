@@ -1,0 +1,8 @@
+{% macro card(title='', href='', body='') %}
+  <article class="card">
+    {% if href %}<a href="{{ href }}">{% endif %}
+      {% if title %}<h3>{{ title }}</h3>{% endif %}
+      {% if body %}<p>{{ body }}</p>{% endif %}
+    {% if href %}</a>{% endif %}
+  </article>
+{% endmacro %}
