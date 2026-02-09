@@ -1,0 +1,8 @@
+<div class="card-grid card-grid-{{ cols or 2 }}">
+  {% for card in cards %}
+    <a class="card" href="{{ card.href }}">
+      <h3>{{ card.title }}</h3>
+      <p>{{ card.body }}</p>
+    </a>
+  {% endfor %}
+</div>

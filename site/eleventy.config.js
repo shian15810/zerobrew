@@ -1,6 +1,7 @@
 export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy("src/_redirects");
   eleventyConfig.addPassthroughCopy({ "src/assets": "assets" });
+  eleventyConfig.addPassthroughCopy({ "src/js": "js" });
 
   return {
     dir: {
