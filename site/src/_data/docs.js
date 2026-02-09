@@ -9,15 +9,23 @@ function toTitle(value) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function extractFrontmatterTitle(filePath) {
+function stripQuotes(value) {
+  return value.trim().replace(/^['"]|['"]$/g, "");
+}
+
+function extractFrontmatter(filePath) {
   const source = fs.readFileSync(filePath, "utf8");
   const match = source.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return null;
+  if (!match) return {};
 
-  const titleMatch = match[1].match(/^title:\s*(.+)$/m);
-  if (!titleMatch) return null;
+  const block = match[1];
+  const titleMatch = block.match(/^title:\s*(.+)$/m);
+  const orderMatch = block.match(/^order:\s*(\d+)$/m);
 
-  return titleMatch[1].trim().replace(/^['"]|['"]$/g, "");
+  return {
+    title: titleMatch ? stripQuotes(titleMatch[1]) : null,
+    order: orderMatch ? Number.parseInt(orderMatch[1], 10) : null,
+  };
 }
 
 function toHref(relativePath) {
@@ -55,7 +63,7 @@ function walkMarkdownFiles(dirPath) {
 
 export default function () {
   if (!fs.existsSync(DOCS_ROOT)) {
-    return { groups: [] };
+    return { root: { title: "Documentation", href: "/docs/" }, groups: [] };
   }
 
   const files = walkMarkdownFiles(DOCS_ROOT);
@@ -70,42 +78,80 @@ export default function () {
 
     const basename = path.basename(relativePath, ".md");
     const fallbackTitle = basename === "index" ? groupTitle : toTitle(basename);
+    const frontmatter = extractFrontmatter(filePath);
+    const isIndex = relativePath === "index.md" || relativePath.endsWith("/index.md");
 
     const page = {
-      title: extractFrontmatterTitle(filePath) || fallbackTitle,
+      title: frontmatter.title || fallbackTitle,
+      order: frontmatter.order,
       href: toHref(relativePath),
       source: relativePath,
+      isIndex,
     };
 
     if (!grouped.has(groupKey)) {
-      grouped.set(groupKey, { title: groupTitle, pages: [] });
+      grouped.set(groupKey, { key: groupKey, title: groupTitle, pages: [] });
     }
 
     grouped.get(groupKey).pages.push(page);
   }
 
-  const groups = [...grouped.entries()]
+  const groupOrder = {
+    _root: 0,
+    "get-started": 1,
+    "core-concepts": 2,
+    commands: 3,
+    guides: 4,
+    community: 5,
+  };
+
+  const orderedGroups = [...grouped.entries()]
     .sort(([a], [b]) => {
-      if (a === "_root") return -1;
-      if (b === "_root") return 1;
+      const left = groupOrder[a] ?? 99;
+      const right = groupOrder[b] ?? 99;
+      if (left !== right) return left - right;
       return a.localeCompare(b);
     })
     .map(([, group]) => {
       group.pages.sort((left, right) => {
-        const leftIsIndex = left.source.endsWith("/index.md") || left.source === "index.md";
-        const rightIsIndex = right.source.endsWith("/index.md") || right.source === "index.md";
+        if (left.isIndex && !right.isIndex) return -1;
+        if (!left.isIndex && right.isIndex) return 1;
 
-        if (leftIsIndex && !rightIsIndex) return -1;
-        if (!leftIsIndex && rightIsIndex) return 1;
-
+        if (left.order != null && right.order != null) return left.order - right.order;
+        if (left.order != null) return -1;
+        if (right.order != null) return 1;
         return left.title.localeCompare(right.title);
       });
+      return group;
+    });
+
+  const rootGroup = orderedGroups.find((group) => group.key === "_root");
+  const rootPage = rootGroup?.pages.find((page) => page.isIndex) || {
+    title: "Documentation",
+    href: "/docs/",
+  };
+
+  const rootChildren = (rootGroup?.pages || [])
+    .filter((page) => !page.isIndex)
+    .map(({ title, href }) => ({ title, href }));
+
+  const groups = orderedGroups
+    .filter((group) => group.key !== "_root")
+    .map((group) => {
+      const parent = group.pages.find((page) => page.isIndex) || null;
+      const children = group.pages.filter((page) => !page.isIndex);
 
       return {
+        key: group.key,
         title: group.title,
-        pages: group.pages.map(({ title, href }) => ({ title, href })),
+        parent: parent ? { title: parent.title, href: parent.href } : null,
+        children: children.map(({ title, href }) => ({ title, href })),
       };
     });
 
-  return { groups };
+  return {
+    root: { title: rootPage.title, href: rootPage.href },
+    rootChildren,
+    groups,
+  };
 }

@@ -1,29 +1,121 @@
+{% set currentUrl = page.url if page and page.url else '' %}
+{% set breadcrumbGroupTitle = '' %}
+{% set breadcrumbGroupHref = '' %}
+{% set currentSectionChildren = [] %}
+{% set currentSectionParentHref = '' %}
+{% set currentSectionParentTitle = '' %}
+
+{% if docs and docs.groups %}
+  {% for group in docs.groups %}
+    {% if group.parent and group.parent.href == currentUrl %}
+      {% set breadcrumbGroupTitle = group.title %}
+      {% set breadcrumbGroupHref = group.parent.href %}
+      {% set currentSectionChildren = group.children %}
+      {% set currentSectionParentHref = group.parent.href %}
+      {% set currentSectionParentTitle = group.parent.title %}
+    {% endif %}
+
+    {% if group.children %}
+      {% for child in group.children %}
+        {% if child.href == currentUrl %}
+          {% set breadcrumbGroupTitle = group.title %}
+          {% if group.parent %}
+            {% set breadcrumbGroupHref = group.parent.href %}
+            {% set currentSectionParentHref = group.parent.href %}
+            {% set currentSectionParentTitle = group.parent.title %}
+          {% endif %}
+          {% set currentSectionChildren = group.children %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
 <div class="docs-shell">
   <aside class="docs-sidebar" aria-label="Documentation navigation">
-    <p><strong>Docs</strong></p>
-    {% set currentUrl = page.url if page and page.url else '' %}
-    {% if docs and docs.groups %}
-      {% for group in docs.groups %}
-        <section class="docs-nav-group">
-          <h2>{{ group.title }}</h2>
+    <ul>
+      <li>
+        {% if docs and docs.root and docs.root.href == currentUrl %}
+          <a href="{{ docs.root.href }}" aria-current="page">{{ docs.root.title }}</a>
+        {% else %}
+          <a href="{{ docs.root.href if docs and docs.root else '/docs/' }}">{{ docs.root.title if docs and docs.root else 'Documentation' }}</a>
+        {% endif %}
+
+        {% if docs and docs.rootChildren and docs.rootChildren.length %}
           <ul>
-            {% for docPage in group.pages %}
-              {% set isActive = docPage.href == currentUrl %}
+            {% for rootPage in docs.rootChildren %}
               <li>
-                {% if isActive %}
-                  <a href="{{ docPage.href }}" class="is-active" aria-current="page">{{ docPage.title }}</a>
+                {% if rootPage.href == currentUrl %}
+                  <a href="{{ rootPage.href }}" aria-current="page">{{ rootPage.title }}</a>
                 {% else %}
-                  <a href="{{ docPage.href }}">{{ docPage.title }}</a>
+                  <a href="{{ rootPage.href }}">{{ rootPage.title }}</a>
                 {% endif %}
               </li>
             {% endfor %}
           </ul>
-        </section>
-      {% endfor %}
-    {% endif %}
+        {% endif %}
+
+        {% if docs and docs.groups and docs.groups.length %}
+          <ul>
+            {% for group in docs.groups %}
+              <li>
+                {% if group.parent %}
+                  {% if group.parent.href == currentUrl %}
+                    <a href="{{ group.parent.href }}" aria-current="page">{{ group.parent.title }}</a>
+                  {% else %}
+                    <a href="{{ group.parent.href }}">{{ group.parent.title }}</a>
+                  {% endif %}
+                {% else %}
+                  {{ group.title }}
+                {% endif %}
+
+                {% if group.children and group.children.length %}
+                  <ul>
+                    {% for child in group.children %}
+                      <li>
+                        {% if child.href == currentUrl %}
+                          <a href="{{ child.href }}" aria-current="page">{{ child.title }}</a>
+                        {% else %}
+                          <a href="{{ child.href }}">{{ child.title }}</a>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </li>
+    </ul>
   </aside>
 
   <main class="docs-main">
+    <nav aria-label="Breadcrumb">
+      <a href="{{ docs.root.href if docs and docs.root else '/docs/' }}">Docs</a>
+      {% if breadcrumbGroupTitle and breadcrumbGroupHref and currentUrl != breadcrumbGroupHref %}
+        / <a href="{{ breadcrumbGroupHref }}">{{ breadcrumbGroupTitle }}</a>
+      {% elif breadcrumbGroupTitle and currentUrl == breadcrumbGroupHref %}
+        / <span>{{ breadcrumbGroupTitle }}</span>
+      {% endif %}
+      {% if title and currentUrl != (docs.root.href if docs and docs.root else '/docs/') and title != breadcrumbGroupTitle %}
+        / <span>{{ title }}</span>
+      {% endif %}
+    </nav>
+
+    {% if title %}
+      <h1>{{ title }}</h1>
+    {% endif %}
+
     {{ content | safe }}
+
+    {% if currentSectionParentHref == currentUrl and currentSectionChildren and currentSectionChildren.length %}
+      <h2>In this section</h2>
+      <ul>
+        {% for child in currentSectionChildren %}
+          <li><a href="{{ child.href }}">{{ child.title }}</a></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </main>
 </div>
